@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Qoo10 成本&利润计算（模板/预设/进度条）</title>
+
+  
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <!-- iOS: Add to Home Screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="利润计算" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <!-- Optional iOS splash (basic) -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<style>
+    :root{
+      --bg:#0b1220;
+      --panel:#0f172a;
+      --card:#111a2e;
+      --card2:#0c1324;
+      --line:rgba(255,255,255,.10);
+      --text:#eef1f8;
+      --muted:#aab3c5;
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --accent:#3b82f6;
+      --accent2:#7c3aed;
+      --r:22px;
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans SC",Arial;
+      background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(59,130,246,.22), transparent 60%),
+        radial-gradient(900px 600px at 110% 20%, rgba(124,58,237,.18), transparent 60%),
+        linear-gradient(180deg, #0b1220, #070b14);
+      color:var(--text);
+    }
+    .wrap{max-width:1100px;margin:auto;padding:16px 16px 22px}
+    .topbar{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: calc(var(--r) + 6px);
+      padding:14px;
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    .topbar::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(700px 220px at 18% 0%, rgba(59,130,246,.22), transparent 60%),
+        radial-gradient(700px 240px at 85% 0%, rgba(124,58,237,.18), transparent 60%);
+      pointer-events:none;
+      filter: blur(1px);
+      opacity:.9;
+    }
+    .topbar > *{position:relative}
+    .titleRow{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+    h1{margin:0;font-size:18px;letter-spacing:.2px}
+    .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
+
+    .seg{
+      display:flex;gap:8px;flex-wrap:wrap;
+      background: rgba(15,23,42,.55);
+      border:1px solid var(--line);
+      padding:6px;
+      border-radius: 999px;
+      user-select:none;
+    }
+    .seg button{
+      border:1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      padding:10px 12px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-size:13px;
+      transition: .2s ease;
+      display:flex;align-items:center;gap:8px;
+    }
+    .seg button:hover{background:rgba(255,255,255,.05)}
+    .seg button.active{
+      background: linear-gradient(180deg, rgba(59,130,246,.78), rgba(124,58,237,.56));
+      border-color: rgba(255,255,255,.12);
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(59,130,246,.18);
+    }
+    .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.22)}
+    .seg button.active .dot{background:#fff}
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      padding:14px;
+      box-shadow: 0 14px 46px rgba(0,0,0,.28);
+    }
+    .card h3{margin:0 0 10px;font-size:13px;color:#fff;display:flex;align-items:center;gap:8px}
+    .pill{
+      font-size:12px;color:#dfe7ff;
+      border:1px solid var(--line);
+      background: rgba(15,23,42,.55);
+      padding:4px 10px;border-radius:999px;
+    }
+
+    .form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:560px){.form{grid-template-columns:1fr}}
+    label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}
+    input, select{
+      width:100%;
+      padding:12px 12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background: rgba(15,23,42,.72);
+      color:#fff;
+      font-size:15px;
+      font-variant-numeric: tabular-nums;
+      outline:none;
+      transition:.15s ease;
+    }
+    input:focus, select:focus{border-color: rgba(59,130,246,.65); box-shadow: 0 0 0 4px rgba(59,130,246,.18)}
+    input[disabled]{opacity:.7}
+
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      padding:11px 12px;border-radius:16px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;font-size:13px;
+      transition:.15s ease;
+      user-select:none;
+    }
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(59,130,246,.85), rgba(124,58,237,.55));
+      border-color: rgba(255,255,255,.14);
+    }
+    .btn:active{transform: translateY(1px)}
+    .btn:hover{background:rgba(255,255,255,.08)}
+    .btn.primary:hover{filter:brightness(1.05)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+
+    .note{margin-top:10px;color:var(--muted);font-size:12px;line-height:1.6}
+
+    .kpis{display:grid;grid-template-columns:1fr;gap:10px}
+    .kpi{
+      background: rgba(15,23,42,.65);
+      border:1px solid var(--line);
+      border-radius: 20px;
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .kpi::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(420px 160px at 10% 10%, rgba(59,130,246,.22), transparent 60%),
+        radial-gradient(420px 160px at 90% 10%, rgba(124,58,237,.18), transparent 60%);
+      opacity:.55;
+      pointer-events:none;
+    }
+    .kpi > *{position:relative}
+    .kpi .t{color:var(--muted);font-size:12px}
+    .kpi .v{font-size:24px;font-weight:900;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+    .pos{color:var(--ok)} .neg{color:var(--bad)}
+    .kpi .mini{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5}
+
+    .bar{
+      margin-top:10px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      border-radius: 999px;
+      height: 12px;
+      overflow:hidden;
+      position:relative;
+    }
+    .bar > div{
+      height:100%;
+      width: 0%;
+      transition: width .35s ease;
+    }
+    .bar .fill-pos{background: linear-gradient(90deg, rgba(34,197,94,.95), rgba(59,130,246,.55))}
+    .bar .fill-neg{background: linear-gradient(90deg, rgba(239,68,68,.95), rgba(124,58,237,.35))}
+    .barHint{margin-top:8px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:10px}
+
+    details{margin-top:10px}
+    summary{cursor:pointer;color:#d7dbff}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+    td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+    td:first-child{color:var(--muted)}
+    td:last-child{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    @media (max-width:560px){td:last-child{white-space:normal}}
+
+    .sticky{
+      display:none;
+      position:sticky; top:0; z-index:10;
+      margin:-16px -16px 10px;
+      padding:10px 12px;
+      background: rgba(15,23,42,.92);
+      border-bottom:1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width:980px){
+      .sticky{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    }
+    .sticky .t{font-size:12px;color:var(--muted)}
+    .sticky .v{font-weight:900;font-variant-numeric:tabular-nums}
+
+    .presetRow{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px
+    }
+    .presetRow > *{flex:1}
+    .presetRow .btn{flex:0 0 auto}
+    .danger{border-color: rgba(239,68,68,.35)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="titleRow">
+        <div>
+          <h1>Qoo10 成本 & 利润计算（模板/预设/进度条）</h1>
+          <div class="sub">
+            ✅ 内置预设：メガ割（默认）/ メガポ（默认）已植入。<br>
+            ✅ 三模板切换已修复死按钮；参数自动保存，手机端也好用。
+          </div>
+        </div>
+
+        <div class="seg" id="seg">
+          <button id="tab-normal" type="button" data-t="normal"><span class="dot"></span>平时</button>
+          <button id="tab-megawari" type="button" data-t="megawari"><span class="dot"></span>メガ割</button>
+          <button id="tab-megapo" type="button" data-t="megapo"><span class="dot"></span>メガポ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sticky">
+      <div>
+        <div class="t">当前真实利润</div>
+        <div class="t" id="stickyTip">—</div>
+      </div>
+      <div class="v" id="stickyProfit">-</div>
+    </div>
+
+    <div class="grid">
+      <!-- Left -->
+      <section class="card">
+        <h3>输入 <span class="pill" id="pillName">平时</span></h3>
+
+        <div class="form">
+          <div>
+            <label>标价 E（円）</label>
+            <input id="E" type="number" value="4439" />
+          </div>
+          <div>
+            <label>目标利润（円）</label>
+            <input id="target" type="number" value="0" />
+          </div>
+
+          <div>
+            <label>商品成本（円）</label>
+            <input id="cost" type="number" value="2849" />
+          </div>
+          <div>
+            <label>运费（円）</label>
+            <input id="ship" type="number" value="300" />
+          </div>
+
+          <div>
+            <label>販売店割引 F（円）</label>
+            <input id="F" type="number" value="0" />
+          </div>
+          <div>
+            <label>SHOPクーポン I（円）</label>
+            <input id="I" type="number" value="0" />
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="card" style="margin-top:12px;background:rgba(15,23,42,.55);box-shadow:none;">
+          <h3 style="margin:0 0 10px;">模板预设（内置 + 自定义） <span class="pill" style="opacity:.9">本地保存</span></h3>
+
+          <div class="presetRow">
+            <div>
+              <label>选择预设</label>
+              <select id="presetSelect"></select>
+            </div>
+            <button class="btn" id="btnApplyPreset" type="button">应用</button>
+            <button class="btn danger" id="btnDeletePreset" type="button">删除</button>
+          </div>
+
+          <div class="presetRow">
+            <div>
+              <label>新预设名称（例：メガ割-2026春）</label>
+              <input id="presetName" type="text" placeholder="输入名称后点保存" />
+            </div>
+            <button class="btn primary" id="btnSavePreset" type="button">保存为预设</button>
+          </div>
+
+          <div class="note">
+            内置预设不可删除（防止误操作）。你可以“另存为新预设”再修改。
+          </div>
+        </div>
+
+        <!-- Advanced -->
+        <details class="note" style="margin-top:12px;">
+          <summary>高级参数（折扣率/费用率，可修改）</summary>
+
+          <div class="card" style="margin-top:12px;background:rgba(15,23,42,.55);box-shadow:none;">
+            <h3 style="margin:0 0 10px;">通用</h3>
+            <div class="form">
+              <div>
+                <label>平台费率 pf（10%→0.10）</label>
+                <input id="pf" type="number" step="0.01" value="0.10" />
+              </div>
+              <div>
+                <label>平台后基准：E×(1-pf)</label>
+                <input id="pfHint" type="text" value="自动计算" disabled />
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="panel-megawari" style="margin-top:12px;background:rgba(15,23,42,.55);box-shadow:none;">
+            <h3 style="margin:0 0 10px;">メガ割 参数</h3>
+            <div class="form">
+              <div>
+                <label>メガ割折扣率 d（20%→0.20）</label>
+                <input id="mw_d" type="number" step="0.01" value="0.20" />
+              </div>
+              <div>
+                <label>支援/系统费率 s（1.5%→0.015，按J）</label>
+                <input id="mw_s" type="number" step="0.001" value="0.015" />
+              </div>
+              <div>
+                <label>卖家负担比例 share（M/2→0.50）</label>
+                <input id="mw_share" type="number" step="0.01" value="0.50" />
+              </div>
+              <div>
+                <label>公式提示</label>
+                <input type="text" value="D = E×(1-pf) - F - I - (J×s) - (M×share)" disabled />
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="panel-megapo" style="margin-top:12px;background:rgba(15,23,42,.55);box-shadow:none;">
+            <h3 style="margin:0 0 10px;">メガポ 参数</h3>
+            <div class="form">
+              <div>
+                <label>쿠폰率 couponRate（10%→0.10）</label>
+                <input id="mp_couponRate" type="number" step="0.01" value="0.10" />
+              </div>
+              <div>
+                <label>ポイント率 pointRate（10%→0.10）</label>
+                <input id="mp_pointRate" type="number" step="0.01" value="0.10" />
+              </div>
+              <div>
+                <label>割引支援手数料 supportRate（0.5%→0.005，按M）</label>
+                <input id="mp_supportRate" type="number" step="0.001" value="0.005" />
+              </div>
+              <div>
+                <label>supportFee是否ROUND（推荐表：是）</label>
+                <select id="mp_round">
+                  <option value="1">ROUND(…,0) 开启</option>
+                  <option value="0">关闭ROUND</option>
+                </select>
+              </div>
+              <div>
+                <label>쿠폰卖家负担比例（1/2→0.50）</label>
+                <input id="mp_couponShare" type="number" step="0.01" value="0.50" />
+              </div>
+              <div>
+                <label>ポイント卖家负担比例（1/2→0.50）</label>
+                <input id="mp_pointShare" type="number" step="0.01" value="0.50" />
+              </div>
+            </div>
+
+            <div class="note">
+              ・coupon=(E-F)×couponRate；M=(E-F-coupon)-I；point=M×pointRate<br>
+              ・supportFee=ROUND(M×supportRate,0)<br>
+              ・D = E×(1-pf) - F - I - supportFee - coupon×couponShare - point×pointShare
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button class="btn primary" id="btnCalc" type="button">计算</button>
+          <button class="btn" id="btnExample" type="button">填入你例子</button>
+          <button class="btn" id="btnReset" type="button">重置</button>
+          <button class="btn" id="btnCSV" type="button">导出明细CSV</button>
+        </div>
+      </section>
+
+      <!-- Right -->
+      <section class="card">
+        <h3>结果 <span class="pill" id="pillMode">平时</span></h3>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="t">理论毛利（不参加活动）</div>
+            <div class="v" id="kpiNormal">-</div>
+            <div class="mini" id="kpiNormalHint">按：E×(1-pf) - F - 成本 - 运费</div>
+          </div>
+
+          <div class="kpi">
+            <div class="t">当前模板真实利润</div>
+            <div class="v" id="kpiReal">-</div>
+
+            <div class="bar" aria-label="profit bar">
+              <div id="barFill" class="fill-pos"></div>
+            </div>
+            <div class="barHint">
+              <span id="barLeft">亏损侧</span>
+              <span id="barRight">盈利侧</span>
+            </div>
+
+            <div class="mini" id="kpiRealHint">按：最終精算金額 D - 成本 - 运费</div>
+          </div>
+
+          <div class="kpi">
+            <div class="t">安全售价（利润 ≥ 目标利润）</div>
+            <div class="v" id="kpiSafe">-</div>
+            <div class="mini" id="kpiSafeHint">目标利润 0 円 → 反推最低标价E</div>
+          </div>
+        </div>
+
+        <details>
+          <summary>展开明细（对账用）</summary>
+          <table><tbody id="detail"></tbody></table>
+        </details>
+      </section>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const safeEl = (id) => $(id) || null;
+
+  const yen = (n)=> (Math.round(n*100)/100).toLocaleString("ja-JP") + " 円";
+  const num = (id)=> {
+    const el = safeEl(id);
+    if(!el) return 0;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? 0 : v;
+  };
+  const setText = (id, txt)=> { const el=safeEl(id); if(el) el.textContent = txt; };
+  const setVal = (id, v)=> { const el=safeEl(id); if(el) el.value = v; };
+  const fmtInt = (n)=> Math.max(0, Math.ceil(n)).toLocaleString("ja-JP");
+  const clamp = (x,min,max)=> Math.max(min, Math.min(max,x));
+
+  const STORAGE_KEY = "qoo10_profit_app_v2";
+  const PRESET_KEY  = "qoo10_profit_presets_v2";
+  let currentTemplate = "normal";
+
+  const TEMPLATE_NAME = {normal:"平时", megawari:"メガ割", megapo:"メガポ"};
+
+  function safeParse(json){
+    try { return JSON.parse(json); } catch(e){ return null; }
+  }
+
+  function collectInputs(){
+    return {
+      E: num("E"),
+      target: num("target"),
+      cost: num("cost"),
+      ship: num("ship"),
+      F: num("F"),
+      I: num("I"),
+      pf: num("pf"),
+
+      mw_d: num("mw_d"),
+      mw_s: num("mw_s"),
+      mw_share: num("mw_share"),
+
+      mp_couponRate: num("mp_couponRate"),
+      mp_pointRate: num("mp_pointRate"),
+      mp_supportRate: num("mp_supportRate"),
+      mp_couponShare: num("mp_couponShare"),
+      mp_pointShare: num("mp_pointShare"),
+      mp_round: safeEl("mp_round") ? safeEl("mp_round").value : "1"
+    };
+  }
+
+  function applyInputs(i){
+    if(!i) return;
+    Object.keys(i).forEach(k=>{
+      if(safeEl(k)) setVal(k, i[k]);
+    });
+  }
+
+  function readState(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const s = raw ? safeParse(raw) : null;
+    return s && typeof s === "object" ? s : null;
+  }
+  function writeState(){
+    const state = {
+      currentTemplate,
+      inputs: collectInputs()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+  function loadState(){
+    const s = readState();
+    if(!s) return;
+    currentTemplate = s.currentTemplate || "normal";
+    applyInputs(s.inputs);
+  }
+
+  function readPresets(){
+    const raw = localStorage.getItem(PRESET_KEY);
+    const p = raw ? safeParse(raw) : null;
+    return (p && typeof p === "object") ? p : {};
+  }
+  function writePresets(p){
+    localStorage.setItem(PRESET_KEY, JSON.stringify(p));
+  }
+
+  // ✅ 内置预设：首次自动植入（不覆盖已有）
+  function ensureBuiltInPresets(){
+    const presets = readPresets();
+    if(Object.keys(presets).length > 0) return;
+
+    const baseDefaults = {
+      pf: 0.10,
+      E: 0, target: 0, cost: 0, ship: 0, F: 0, I: 0,
+      mw_d: 0.20, mw_s: 0.015, mw_share: 0.50,
+      mp_couponRate: 0.10, mp_pointRate: 0.10, mp_supportRate: 0.005,
+      mp_couponShare: 0.50, mp_pointShare: 0.50, mp_round: "1"
+    };
+
+    presets["メガ割（默认）"] = {
+      template: "megawari",
+      inputs: {...baseDefaults},
+      savedAt: Date.now(),
+      builtIn: true
+    };
+
+    presets["メガポ（默认）"] = {
+      template: "megapo",
+      inputs: {...baseDefaults},
+      savedAt: Date.now(),
+      builtIn: true
+    };
+
+    presets["平时（默认）"] = {
+      template: "normal",
+      inputs: {...baseDefaults},
+      savedAt: Date.now(),
+      builtIn: true
+    };
+
+    writePresets(presets);
+  }
+
+  function refreshPresetSelect(){
+    const sel = safeEl("presetSelect");
+    if(!sel) return;
+
+    const presets = readPresets();
+    const keys = Object.keys(presets).sort((a,b)=>a.localeCompare(b, "ja"));
+
+    sel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = "— 选择预设 —";
+    sel.appendChild(opt0);
+
+    keys.forEach(name=>{
+      const p = presets[name];
+      const o = document.createElement("option");
+      o.value = name;
+      const mode = TEMPLATE_NAME[p.template] || p.template;
+      const tag = p.builtIn ? "内置" : "自定义";
+      o.textContent = `${name}（${mode} / ${tag}）`;
+      sel.appendChild(o);
+    });
+  }
+
+  function savePreset(){
+    const name = (safeEl("presetName")?.value || "").trim();
+    if(!name){ alert("请输入预设名称"); return; }
+    const presets = readPresets();
+    presets[name] = {
+      template: currentTemplate,
+      inputs: collectInputs(),
+      savedAt: Date.now(),
+      builtIn: false
+    };
+    writePresets(presets);
+    refreshPresetSelect();
+    safeEl("presetName").value = "";
+    alert("已保存预设");
+  }
+
+  function applyPreset(){
+    const sel = safeEl("presetSelect");
+    const name = sel ? sel.value : "";
+    if(!name) return;
+    const presets = readPresets();
+    const p = presets[name];
+    if(!p){ alert("预设不存在"); refreshPresetSelect(); return; }
+
+    if(p.template) setTemplate(p.template, true);
+    applyInputs(p.inputs);
+    recalc();
+  }
+
+  // ✅ 内置预设不可删除
+  function deletePreset(){
+    const sel = safeEl("presetSelect");
+    const name = sel ? sel.value : "";
+    if(!name) return;
+
+    const presets = readPresets();
+    const p = presets[name];
+    if(!p) return;
+
+    if(p.builtIn){
+      alert("这是内置预设，不能删除。你可以另存为新预设后再修改。");
+      return;
+    }
+
+    if(!confirm(`确定删除预设「${name}」吗？`)) return;
+    delete presets[name];
+    writePresets(presets);
+    refreshPresetSelect();
+  }
+
+  function setTemplate(t, silent=false){
+    if(!TEMPLATE_NAME[t]) t = "normal";
+    currentTemplate = t;
+
+    ["normal","megawari","megapo"].forEach(x=>{
+      const tab = safeEl("tab-"+x);
+      if(tab) tab.classList.toggle("active", x===t);
+    });
+
+    setText("pillName", TEMPLATE_NAME[t]);
+    setText("pillMode", TEMPLATE_NAME[t]);
+
+    const pmw = safeEl("panel-megawari");
+    const pmp = safeEl("panel-megapo");
+    if(pmw) pmw.style.display = (t==="megawari") ? "block" : "none";
+    if(pmp) pmp.style.display = (t==="megapo") ? "block" : "none";
+
+    if(!silent) recalc();
+  }
+
+  // ---------- calculations ----------
+  function computeNormal(E, ctx){
+    const base = E*(1-ctx.pf);
+    const D = base - ctx.F - ctx.I;
+    const profit = D - ctx.cost - ctx.ship;
+    const detail = [
+      ["模板","平时"],
+      ["平台后基准 E×(1-pf)", yen(base)],
+      ["販売店割引 F", yen(ctx.F)],
+      ["SHOPクーポン I", yen(ctx.I)],
+      ["最終精算金額 D", yen(D)],
+      ["成本+运费", yen(ctx.cost + ctx.ship)],
+      ["真实利润", yen(profit)]
+    ];
+    return {D, profit, detail};
+  }
+
+  function computeMegaWari(E, ctx){
+    const base = E*(1-ctx.pf);
+    const G = E - ctx.F;
+    const M = G * ctx.mw_d;
+    const H = G - M;
+    const J = H - ctx.I;
+    const K = J * ctx.mw_s;
+    const L = M * ctx.mw_share;
+    const D = base - ctx.F - ctx.I - K - L;
+    const profit = D - ctx.cost - ctx.ship;
+
+    const detail = [
+      ["模板","メガ割"],
+      ["平台后基准 E×(1-pf)", yen(base)],
+      ["販売店割引 F", yen(ctx.F)],
+      ["露出価格 G=E-F", yen(G)],
+      ["メガ割割引 M=G×d", yen(M)],
+      ["SHOPクーポン I", yen(ctx.I)],
+      ["SHOPクーポン後 J", yen(J)],
+      ["支援/系统费 K=J×s", yen(K)],
+      ["卖家负担 L=M×share", yen(L)],
+      ["最終精算金額 D", yen(D)],
+      ["成本+运费", yen(ctx.cost + ctx.ship)],
+      ["真实利润", yen(profit)]
+    ];
+    return {D, profit, detail};
+  }
+
+  function computeMegaPo(E, ctx){
+    const base = E*(1-ctx.pf);
+    const expose = E - ctx.F;
+    const coupon = expose * ctx.mp_couponRate;
+    const afterCoupon = expose - coupon;
+    const M = afterCoupon - ctx.I;
+    const point = M * ctx.mp_pointRate;
+    const supportRaw = M * ctx.mp_supportRate;
+    const support = (ctx.mp_round==="1") ? Math.round(supportRaw) : supportRaw;
+
+    const T = coupon * ctx.mp_couponShare;
+    const U = point * ctx.mp_pointShare;
+
+    const D = base - ctx.F - ctx.I - support - T - U;
+    const profit = D - ctx.cost - ctx.ship;
+
+    const detail = [
+      ["模板","メガポ"],
+      ["平台后基准 E×(1-pf)", yen(base)],
+      ["販売店割引 F", yen(ctx.F)],
+      ["露出価格 (E-F)", yen(expose)],
+      ["クーポン coupon=(E-F)×rate", yen(coupon)],
+      ["쿠폰后", yen(afterCoupon)],
+      ["SHOPクーポン I", yen(ctx.I)],
+      ["M（쿠폰后- I）", yen(M)],
+      ["ポイント point=M×rate", yen(point)],
+      ["支援手数料 support", (ctx.mp_round==="1") ? (yen(support) + "（ROUND）") : yen(support)],
+      ["卖家负担 T（coupon×share）", yen(T)],
+      ["卖家负担 U（point×share）", yen(U)],
+      ["最終精算金額 D", yen(D)],
+      ["成本+运费", yen(ctx.cost + ctx.ship)],
+      ["真实利润", yen(profit)]
+    ];
+    return {D, profit, detail};
+  }
+
+  function computeForTemplate(t, E, ctx){
+    if(t==="megawari") return computeMegaWari(E, ctx);
+    if(t==="megapo") return computeMegaPo(E, ctx);
+    return computeNormal(E, ctx);
+  }
+
+  function findSafePrice(t, ctx){
+    const profitAt = (E)=> computeForTemplate(t, E, ctx).profit;
+    let low = 0;
+    let high = Math.max(1, Math.ceil(ctx.E || 1));
+    const CAP = 10000000;
+
+    while(high < CAP && profitAt(high) < ctx.target) high *= 2;
+    if(profitAt(high) < ctx.target && high >= CAP) return null;
+
+    while(low + 1 < high){
+      const mid = Math.floor((low + high)/2);
+      if(profitAt(mid) >= ctx.target) high = mid;
+      else low = mid;
+    }
+    return high;
+  }
+
+  function setProfitBar(profit, costShip){
+    const fill = safeEl("barFill");
+    if(!fill) return;
+
+    const scale = Math.max(1000, Math.round(costShip * 0.6));
+    const pct = clamp(Math.abs(profit) / scale * 100, 0, 100);
+
+    fill.className = (profit >= 0) ? "fill-pos" : "fill-neg";
+    fill.style.width = pct.toFixed(1) + "%";
+
+    setText("barLeft", `- ${yen(Math.max(0, -profit))}`);
+    setText("barRight", `+ ${yen(Math.max(0, profit))}`);
+  }
+
+  function recalc(){
+    const ctx = collectInputs();
+
+    const baseNow = ctx.E * (1-ctx.pf);
+    if(safeEl("pfHint")) setVal("pfHint", `E×(1-pf) = ${yen(baseNow)}`);
+
+    const normalGross = baseNow - ctx.F - ctx.cost - ctx.ship;
+    const normalEl = safeEl("kpiNormal");
+    if(normalEl){
+      normalEl.textContent = yen(normalGross);
+      normalEl.className = "v " + (normalGross>=0 ? "pos":"neg");
+    }
+
+    const r = computeForTemplate(currentTemplate, ctx.E, ctx);
+    const realEl = safeEl("kpiReal");
+    if(realEl){
+      realEl.textContent = yen(r.profit);
+      realEl.className = "v " + (r.profit>=0 ? "pos":"neg");
+    }
+
+    setProfitBar(r.profit, ctx.cost + ctx.ship);
+
+    setText("stickyProfit", yen(r.profit));
+    const sp = safeEl("stickyProfit");
+    if(sp) sp.style.color = (r.profit>=0) ? "var(--ok)" : "var(--bad)";
+    setText("stickyTip", `D=${yen(r.D)} / 目标=${yen(ctx.target)}`);
+
+    const safe = findSafePrice(currentTemplate, ctx);
+    setText("kpiSafeHint", `目标利润 ${ctx.target.toLocaleString("ja-JP")} 円 → 反推最低标价E`);
+    const safeEl2 = safeEl("kpiSafe");
+    if(safeEl2){
+      if(safe === null){
+        safeEl2.textContent = "无法反推（永远达不到目标）";
+        safeEl2.className = "v neg";
+      }else{
+        safeEl2.textContent = fmtInt(safe) + " 円";
+        safeEl2.className = "v";
+      }
+    }
+
+    const tb = safeEl("detail");
+    if(tb) tb.innerHTML = r.detail.map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join("");
+
+    writeState();
+  }
+
+  function fillExample(){
+    setVal("E", 4439);
+    setVal("cost", 2849);
+    setVal("ship", 300);
+    setVal("F", 0);
+    setVal("I", 0);
+    setVal("target", 0);
+    recalc();
+  }
+
+  function resetAll(){
+    setVal("E", 0); setVal("target", 0);
+    setVal("cost", 0); setVal("ship", 0);
+    setVal("F", 0); setVal("I", 0);
+
+    setVal("pf", 0.10);
+
+    setVal("mw_d", 0.20);
+    setVal("mw_s", 0.015);
+    setVal("mw_share", 0.50);
+
+    setVal("mp_couponRate", 0.10);
+    setVal("mp_pointRate", 0.10);
+    setVal("mp_supportRate", 0.005);
+    setVal("mp_couponShare", 0.50);
+    setVal("mp_pointShare", 0.50);
+    if(safeEl("mp_round")) safeEl("mp_round").value = "1";
+
+    recalc();
+  }
+
+  function exportCSV(){
+    const ctx = collectInputs();
+    const r = computeForTemplate(currentTemplate, ctx.E, ctx);
+    const lines = [["项","数值"], ...r.detail]
+      .map(row => row.map(x => `"${String(x).replaceAll('"','""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([lines], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qoo10_${currentTemplate}_detail.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- init ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    // Template tabs (fixed)
+    const seg = safeEl("seg");
+    if(seg){
+      seg.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-t]");
+        if(!btn) return;
+        setTemplate(btn.getAttribute("data-t"));
+      });
+    }
+
+    // Buttons
+    safeEl("btnCalc")?.addEventListener("click", recalc);
+    safeEl("btnExample")?.addEventListener("click", fillExample);
+    safeEl("btnReset")?.addEventListener("click", resetAll);
+    safeEl("btnCSV")?.addEventListener("click", exportCSV);
+
+    // Presets
+    safeEl("btnSavePreset")?.addEventListener("click", savePreset);
+    safeEl("btnApplyPreset")?.addEventListener("click", applyPreset);
+    safeEl("btnDeletePreset")?.addEventListener("click", deletePreset);
+
+    // Live updates
+    const watch = ["E","target","cost","ship","F","I","pf","mw_d","mw_s","mw_share","mp_couponRate","mp_pointRate","mp_supportRate","mp_couponShare","mp_pointShare","mp_round"];
+    watch.forEach(id=>{
+      const el = safeEl(id);
+      if(!el) return;
+      el.addEventListener("input", recalc);
+      el.addEventListener("change", recalc);
+    });
+
+    // Load saved inputs/template
+    loadState();
+
+    // ✅ Inject built-in presets first time
+    ensureBuiltInPresets();
+    refreshPresetSelect();
+
+    // Activate template + first render
+    setTemplate(currentTemplate, true);
+    recalc();
+  });
+
+})();
+</script>
+
+<script>
+  // PWA Service Worker
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js");
+    });
+  }
+</script>
+
+</body>
+</html>
