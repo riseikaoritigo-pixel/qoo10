@@ -41,6 +41,14 @@ export function megaPoAt(listPrice, p) {
   return {listPrice:price,coupon,buyerPayment,points,categoryFee,sellerCoupon,sellerPoints,feeTax,settlement,profit:settlement-num(p.productCost)-num(p.sellerShippingCost)};
 }
 
+export function normalSaleAt(listPrice,p){
+  const price=Math.max(0,Math.floor(num(listPrice)));
+  const categoryFee=yen(price*rate(p.categoryFeeRate));
+  const feeTax=Math.floor(categoryFee*rate(p.feeTaxRate)+Number.EPSILON);
+  const settlement=price-categoryFee-feeTax;
+  return {listPrice:price,buyerPayment:price,categoryFee,feeTax,settlement,profit:settlement-num(p.productCost)-num(p.sellerShippingCost)};
+}
+
 export function timeSaleAt(listPrice, p) {
   const price=Math.max(0,Math.floor(num(listPrice))), optionPrice=Math.max(0,num(p.optionPrice)), shipping=Math.max(0,num(p.customerShipping));
   const discount=p.discountType==='amount'?Math.min(Math.max(0,yen(p.discountAmount)),price):Math.min(yen(price*rate(p.discountRate)),price);
