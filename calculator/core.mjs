@@ -49,6 +49,32 @@ export function normalSaleAt(listPrice,p){
   return {listPrice:price,buyerPayment:price,categoryFee,feeTax,settlement,profit:settlement-num(p.productCost)-num(p.sellerShippingCost)};
 }
 
+function strategyAdCost(p){return Math.max(0,num(p.listingFee))/Math.max(1,Math.floor(num(p.expectedOrders)))}
+export function megaSaleWithTimeAt(listPrice,p){
+  const price=Math.max(0,Math.floor(num(listPrice))),timeDiscount=yen(price*rate(p.timeSaleRate)),timeSalePrice=Math.max(0,price-timeDiscount);
+  const raw=timeSalePrice*rate(p.mega.buyerDiscountRate),discount=Math.min(yen(raw),Math.max(0,num(p.mega.discountCap))),buyerPayment=timeSalePrice-discount;
+  const categoryFee=yen(price*rate(p.mega.categoryFeeRate)),sellerDiscount=share(raw,p.mega.discountCap,rate(p.mega.sellerDiscountShare));
+  const systemFee=yen(buyerPayment*rate(p.mega.megaSystemFeeRate)),supportFee=yen(price*rate(p.mega.supportFeeRate));
+  const feeTax=Math.floor((categoryFee+systemFee+supportFee)*rate(p.mega.feeTaxRate)+Number.EPSILON),adCost=strategyAdCost(p);
+  const settlement=timeSalePrice-categoryFee-sellerDiscount-systemFee-supportFee-feeTax-adCost;
+  return {listPrice:price,timeDiscount,timeSalePrice,discount,buyerPayment,categoryFee,sellerDiscount,systemFee,supportFee,feeTax,adCost,settlement,profit:settlement-num(p.productCost)-num(p.sellerShippingCost)};
+}
+export function megaPoWithTimeAt(listPrice,p){
+  const price=Math.max(0,Math.floor(num(listPrice))),timeDiscount=yen(price*rate(p.timeSaleRate)),timeSalePrice=Math.max(0,price-timeDiscount);
+  const raw=timeSalePrice*rate(p.po.couponRate),coupon=Math.min(yen(raw),Math.max(0,num(p.po.couponCap))),after=timeSalePrice-coupon,buyerPayment=after;
+  const points=Math.min(yen(after*rate(p.po.pointRate)),Math.max(0,num(p.po.pointCap))),categoryFee=yen(price*rate(p.po.categoryFeeRate));
+  const sellerCoupon=share(raw,p.po.couponCap,rate(p.po.sellerCouponShare)),sellerPoints=Math.floor(points*rate(p.po.sellerPointShare)+Number.EPSILON);
+  const feeTax=Math.floor(categoryFee*rate(p.po.feeTaxRate)+Number.EPSILON),adCost=strategyAdCost(p);
+  const settlement=timeSalePrice-categoryFee-sellerCoupon-sellerPoints-feeTax-adCost;
+  return {listPrice:price,timeDiscount,timeSalePrice,coupon,buyerPayment,points,categoryFee,sellerCoupon,sellerPoints,feeTax,adCost,settlement,profit:settlement-num(p.productCost)-num(p.sellerShippingCost)};
+}
+export function futureSafeAt(listPrice,p){
+  const normal=normalSaleAt(listPrice,p),mega=megaSaleWithTimeAt(listPrice,p),po=megaPoWithTimeAt(listPrice,p);
+  const scenarios=[['Mega割＋Time Sale',mega],['MegaPo＋Time Sale',po],['正常销售',normal]].sort((a,b)=>a[1].profit-b[1].profit);
+  const [worstName,worst]=scenarios[0];
+  return {...worst,listPrice:Math.max(0,Math.floor(num(listPrice))),profit:worst.profit,worstName,normal,mega,po};
+}
+
 export function timeSaleAt(listPrice, p) {
   const price=Math.max(0,Math.floor(num(listPrice))), optionPrice=Math.max(0,num(p.optionPrice)), shipping=Math.max(0,num(p.customerShipping));
   const discount=p.discountType==='amount'?Math.min(Math.max(0,yen(p.discountAmount)),price):Math.min(yen(price*rate(p.discountRate)),price);
