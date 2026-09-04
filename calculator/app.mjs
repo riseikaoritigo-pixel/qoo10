@@ -1,4 +1,4 @@
-import {futureSafeAt,normalSaleAt,megaSaleAt,megaPoAt,timeSaleAt,rakutenAt,solve,num} from './core.mjs';
+import {futureSafeAt,normalSaleAt,megaSaleAt,megaPoAt,timeSaleAt,rakutenAt,solve,num} from './core.mjs?v=20260904-3';
 
 const defaults={
   activePlatform:'mega-sale',
